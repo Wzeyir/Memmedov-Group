@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Məmmədov Group</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0b0b0b; color: #f4f4f4; font-family: 'Segoe UI', sans-serif; }
+        .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: #111; border: 1px solid rgba(229,184,105,0.2); border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; }
+        .login-box h2 { color: #e5b869; margin-bottom: 24px; text-align: center; }
+        .login-box input { width: 100%; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.95rem; }
+        .login-box button { width: 100%; padding: 12px; border-radius: 10px; border: none; background: #e5b869; color: #111; font-weight: 700; cursor: pointer; font-size: 1rem; }
+        .error { color: #f5a6ad; margin-bottom: 12px; text-align: center; font-size: 0.9rem; }
+        .admin-page { display: none; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: #111; border-right: 1px solid rgba(229,184,105,0.15); padding: 24px 16px; }
+        .sidebar h3 { color: #e5b869; margin-bottom: 30px; font-size: 1rem; }
+        .sidebar a { display: block; color: #ccc; text-decoration: none; padding: 10px 14px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+        .sidebar a.active, .sidebar a:hover { background: rgba(229,184,105,0.1); color: #e5b869; }
+        .sidebar .logout { color: #f5a6ad; border: 1px solid rgba(245,166,173,0.3); text-align: center; margin-top: 20px; }
+        .main-content { margin-left: 220px; padding: 30px; }
+        .main-content h2 { color: #e5b869; margin-bottom: 20px; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .card { background: #111; border: 1px solid rgba(229,184,105,0.15); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card-header span { color: #e5b869; font-weight: 600; }
+        .card p { color: #ccc; font-size: 0.9rem; margin-bottom: 6px; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; }
+        .badge.unread { background: rgba(229,184,105,0.2); color: #e5b869; }
+        .badge.read { background: rgba(255,255,255,0.05); color: #888; }
+        .btn { padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.85rem; margin-left: 8px; }
+        .btn-read { background: rgba(229,184,105,0.15); color: #e5b869; }
+        .btn-delete { background: rgba(220,53,69,0.15); color: #f5a6ad; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #111; border: 1px solid rgba(229,184,105,0.15); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-card h3 { color: #e5b869; font-size: 2rem; }
+        .stat-card p { color: #888; font-size: 0.85rem; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="login-page" id="login-page">
+    <div class="login-box">
+        <h2>Admin Giriş</h2>
+        <div class="error" id="login-error"></div>
+        <input type="text" id="username" placeholder="İstifadəçi adı">
+        <input type="password" id="password" placeholder="Şifrə">
+        <button onclick="login()">Daxil ol</button>
+    </div>
+</div>
+
+<div class="admin-page" id="admin-page">
+    <div class="sidebar">
+        <h3>⚙ Admin Panel</h3>
+        <a class="active" onclick="showTab('dashboard', this)">📊 Dashboard</a>
+        <a onclick="showTab('contacts', this)">✉ Mesajlar</a>
+        <a onclick="showTab('calculations', this)">🧮 Hesablamalar</a>
+        <a class="logout" onclick="logout()">Çıxış</a>
+    </div>
+    <div class="main-content">
+        <div class="tab active" id="tab-dashboard">
+            <h2>Dashboard</h2>
+            <div class="stats">
+                <div class="stat-card"><h3 id="stat-contacts">0</h3><p>Ümumi Mesaj</p></div>
+                <div class="stat-card"><h3 id="stat-unread">0</h3><p>Oxunmamış</p></div>
+                <div class="stat-card"><h3 id="stat-calcs">0</h3><p>Hesablama</p></div>
+            </div>
+        </div>
+        <div class="tab" id="tab-contacts">
+            <h2>Mesajlar</h2>
+            <div id="contacts-list"></div>
+        </div>
+        <div class="tab" id="tab-calculations">
+            <h2>Hesablamalar</h2>
+            <div id="calculations-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://127.0.0.1:8000';
+    let token = localStorage.getItem('admin_token');
+
+    if (token) showAdmin();
+
+    async function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch(`${API}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `username=${username}&password=${password}`
+        });
+        if (res.ok) {
+            const data = await res.json();
+            token = data.access_token;
+            localStorage.setItem('admin_token', token);
+            showAdmin();
+        } else {
+            document.getElementById('login-error').textContent = 'İstifadəçi adı və ya şifrə yanlışdır!';
+        }
+    }
+
+    function showAdmin() {
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('admin-page').style.display = 'block';
+        loadDashboard();
+    }
+
+    function logout() {
+        localStorage.removeItem('admin_token');
+        token = null;
+        location.reload();
+    }
+
+    function showTab(name, el) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        if (el) el.classList.add('active');
+        if (name === 'contacts') loadContacts();
+        if (name === 'calculations') loadCalculations();
+        if (name === 'dashboard') loadDashboard();
+    }
+
+    async function loadDashboard() {
+        try {
+            const headers = { 'Authorization': 'Bearer ' + token };
+            const [contactsRes, calcsRes] = await Promise.all([
+                fetch(`${API}/contact/`, { headers }),
+                fetch(`${API}/calculator/`, { headers })
+            ]);
+            const contacts = await contactsRes.json();
+            const calcs = await calcsRes.json();
+            document.getElementById('stat-contacts').textContent = contacts.length;
+            document.getElementById('stat-unread').textContent = contacts.filter(c => !c.is_read).length;
+            document.getElementById('stat-calcs').textContent = calcs.length;
+        } catch(e) {
+            console.error('Dashboard xətası:', e);
+        }
+    }
+
+    async function loadContacts() {
+        const res = await fetch(`${API}/contact/`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const contacts = await res.json();
+        const list = document.getElementById('contacts-list');
+        list.innerHTML = contacts.map(c => `
+            <div class="card">
+                <div class="card-header">
+                    <span>${c.name} — ${c.phone}</span>
+                    <div>
+                        <span class="badge ${c.is_read ? 'read' : 'unread'}">${c.is_read ? 'Oxundu' : 'Yeni'}</span>
+                        ${!c.is_read ? `<button class="btn btn-read" onclick="markRead(${c.id})">Oxundu işarələ</button>` : ''}
+                        <button class="btn btn-delete" onclick="deleteContact(${c.id})">Sil</button>
+                    </div>
+                </div>
+                <p>📧 ${c.email || '—'}</p>
+                <p>💬 ${c.message}</p>
+                <p style="color:#555; font-size:0.8rem; margin-top:8px;">${new Date(c.created_at).toLocaleString('az-AZ')}</p>
+            </div>
+        `).join('') || '<p style="color:#888;">Mesaj yoxdur</p>';
+    }
+
+    async function loadCalculations() {
+        const res = await fetch(`${API}/calculator/`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const calcs = await res.json();
+        const list = document.getElementById('calculations-list');
+        list.innerHTML = calcs.map(c => `
+            <div class="card">
+                <div class="card-header">
+                    <span>${c.work_type} — ${c.quality}</span>
+                    <button class="btn btn-delete" onclick="deleteCalc(${c.id})">Sil</button>
+                </div>
+                <p>📐 Sahə: ${c.total_area} m²</p>
+                <p>💰 Qiymət: ${c.total_price.toLocaleString('az-AZ')} ₼</p>
+                <p style="color:#555; font-size:0.8rem; margin-top:8px;">${new Date(c.created_at).toLocaleString('az-AZ')}</p>
+            </div>
+        `).join('') || '<p style="color:#888;">Hesablama yoxdur</p>';
+    }
+
+    async function markRead(id) {
+        await fetch(`${API}/contact/${id}/read`, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + token } });
+        loadContacts();
+        loadDashboard();
+    }
+
+    async function deleteContact(id) {
+        await fetch(`${API}/contact/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        loadContacts();
+        loadDashboard();
+    }
+
+    async function deleteCalc(id) {
+        await fetch(`${API}/calculator/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        loadCalculations();
+        loadDashboard();
+    }
+</script>
+</body>
+</html>
