@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from dotenv import load_dotenv
 import os
-
 from database import engine, Base
 from model import Admin
 from routers import auth, contact, calculator
@@ -33,9 +32,9 @@ def admin_panel():
 
 @app.get("/")
 def site():
-    return FileResponse("../index.html")
+    return FileResponse("index.html")
 
-app.mount("/static", StaticFiles(directory=".."), name="frontend")
+app.mount("/static", StaticFiles(directory="."), name="frontend")
 
 @app.on_event("startup")
 def startup():
@@ -47,3 +46,5 @@ def startup():
             username=os.getenv("ADMIN_USERNAME"),
             password=hash_password(os.getenv("ADMIN_PASSWORD"))
         ))
+        db.commit()
+    db.close()
