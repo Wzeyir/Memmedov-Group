@@ -971,7 +971,7 @@ document.getElementById('contact-form').addEventListener('submit', async functio
     btn.textContent = 'Göndərilir...';
     try {
         var res = await fetch('/contact/', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name:data.get('name'), phone:data.get('phone2')||data.get('phone'), email:data.get('email')||null, message:data.get('message') }) });
-        if (res.ok) { this.style.display='none'; document.getElementById('form-success').style.display='block'; }
+        if (res.ok) { this.reset(); btn.textContent = 'Göndər'; document.getElementById('form-success').style.display='block'; }
         else { alert('Xəta baş verdi.'); btn.textContent = 'Göndər'; }
     } catch { alert('Server ilə əlaqə yoxdur.'); btn.textContent = 'Göndər'; }
 });
