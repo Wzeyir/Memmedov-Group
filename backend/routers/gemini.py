@@ -26,5 +26,8 @@ async def chat(req: ChatRequest):
         res = await client.post(url, json=payload, timeout=30)
         data = res.json()
 
+    if "candidates" not in data:
+        return {"reply": str(data)}
+
     reply = data["candidates"][0]["content"]["parts"][0]["text"]
     return {"reply": reply}
