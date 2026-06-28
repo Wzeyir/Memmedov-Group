@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 from database import engine, Base
 from model import Admin
-from routers import auth, contact, calculator
+from routers import auth, contact, calculator,gemini
 from routers.auth import hash_password
 from sqlalchemy.orm import Session
 from database import SessionLocal
@@ -24,7 +24,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(contact.router)
-app.include_router(calculator.router)
+app.include_router(gemini.router)
 
 @app.get("/admin")
 def admin_panel():
