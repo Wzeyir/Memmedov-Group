@@ -978,8 +978,9 @@ async function sendAIMessage() {
     try {
         const res = await fetch('/gemini/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ message: msg, context: 'general' }) });
         const data = await res.json();
+        const reply = data.reply || data.text || data.content || data.message || JSON.stringify(data);
         document.getElementById('ai-typing').remove();
-        messages.innerHTML += `<div style="margin-bottom:10px;"><span style="background:#1a1a1a;color:#ddd;padding:8px 12px;border-radius:12px 12px 12px 2px;display:inline-block;max-width:85%;font-size:0.85rem;line-height:1.5;">${data.reply}</span></div>`;
+        messages.innerHTML += `<div style="margin-bottom:10px;"><span style="background:#1a1a1a;color:#ddd;padding:8px 12px;border-radius:12px 12px 12px 2px;display:inline-block;max-width:85%;font-size:0.85rem;line-height:1.5;">${reply}</span></div>`;
         messages.scrollTop = messages.scrollHeight;
     } catch {
         document.getElementById('ai-typing').remove();
