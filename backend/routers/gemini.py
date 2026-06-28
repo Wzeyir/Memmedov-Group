@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 import os
-import httpx
+import google.generativeai as genai
 
 router = APIRouter(prefix="/gemini", tags=["gemini"])
 
@@ -11,6 +11,9 @@ class ChatRequest(BaseModel):
 
 @router.post("/chat")
 async def chat(req: ChatRequest):
+    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+    model = genai.GenerativeModel("gemini-1.5-flash")
+
     if req.context == "design":
         system = "Sən Məmmədov Group şirkətinin AI dizayn köməkçisisən. Azərbaycan dilində tövsiyə ver."
     elif req.context == "calculator":
@@ -18,16 +21,5 @@ async def chat(req: ChatRequest):
     else:
         system = "Sən Məmmədov Group AI köməkçisisən. Təmir, dizayn mövzularında Azərbaycan dilində kömək et."
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    payload = {"contents": [{"parts": [{"text": f"{system}\n\nİstifadəçi: {req.message}"}]}]}
-
-    async with httpx.AsyncClient() as client:
-        res = await client.post(url, json=payload, timeout=30)
-        data = res.json()
-
-    if "candidates" not in data:
-        return {"reply": str(data)}
-
-    reply = data["candidates"][0]["content"]["parts"][0]["text"]
-    return {"reply": reply}
+    response = model.generate_content(f"{system}\n\nİstifadəçi: {req.message}")
+    return {"reply": response.text}
